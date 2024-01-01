@@ -26,8 +26,8 @@ def good_link_part(link_part: str) -> bool:
     return True
 
 
-def get_wiki_branches(wiki: Wiki) -> list[Wiki]:
-    html = requests.get(wiki.link).text
+def get_wiki_branches(wiki: Wiki, session: requests.Session) -> list[Wiki]:
+    html = session.get(wiki.link).text
 
     wiki_branches = []
     for match in wiki_link_re.finditer(html):
@@ -47,13 +47,12 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument(
         "-s", "--start",
-        default="https://en.wikipedia.org/wiki/Adolf_Hitler",
+        default="https://en.wikipedia.org/wiki/Toilet_paper_orientation",
         help="starting wikipedia link"
     )
     parser.add_argument(
         "-e", "--end",
-        default="https://en.wikipedia.org/wiki/Winston_Churchill%27s_%22Wilderness%22_years,_1929%E2%80%931939",
-        # default="https://en.wikipedia.org/wiki/Toilet_paper_orientation",
+        default="https://en.wikipedia.org/wiki/Adolf_Hitler",
         help="ending wikipedia link"
     )
 
@@ -74,6 +73,7 @@ if __name__ == "__main__":
     # Run wiki breadth-first search.
     wiki_link_re = re.compile("<a href=\"(/wiki/.*?)\"")
 
+    session = requests.Session()
     pool = mp.Pool()
 
     depth = 0
@@ -87,7 +87,7 @@ if __name__ == "__main__":
         print(f"Depth: {depth}")
 
         async_wiki_branches = [
-            pool.apply_async(get_wiki_branches, args=(wiki,))
+            pool.apply_async(get_wiki_branches, args=(wiki, session))
             for wiki in explore_wikis
         ]
         
@@ -116,5 +116,5 @@ if __name__ == "__main__":
         depth += 1
 
     end_time = time.time()
-    print(f"Elapsed time: {end_time - start_time}")
+    print(f"Elapsed time: {end_time - start_time: .4f} seconds")
 
