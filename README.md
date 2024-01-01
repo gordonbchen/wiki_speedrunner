@@ -4,7 +4,7 @@ A wikipedia speedrunner.
 * Uses requests to get html of wikipedia page
 * Scrapes html for wiki link using regex
 * Breadth-first search
-* Async multiprocessing for speed and non-blockign requests
+* Async multiprocessing for speed and non-blocking requests
 
 ## Usage
 * Create venv and install requirements.txt
