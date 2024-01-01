@@ -14,6 +14,7 @@ A wikipedia speedrunner.
 
 ## Examples
 * Toilet paper orientation -> Adolf Hitler
+![wiki_speedrun](https://github.com/gordonbchen/wiki_speedrunner/assets/107230749/e3920e44-2002-4f91-bb44-1f90463cc25c)
 
 ## Possible speed improvements
 * Multiple sessions
