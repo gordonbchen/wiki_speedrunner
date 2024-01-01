@@ -8,9 +8,9 @@ A wikipedia speedrunner.
 
 ## Usage
 * Create venv and install requirements.txt
-* run python3 main.py
+* run `python3 main.py`
   * Default start wiki = Toilet Paper Orientation, end wiki = Adolf Hitler
-  * Use flags -s and -e followed by link to wikipedia page to set start and end wikis respectively
+  * Use flags `-s` and `-e` followed by link to wikipedia page to set start and end wikis respectively
 
 ## Examples
 * Toilet paper orientation -> Adolf Hitler
