@@ -17,7 +17,6 @@ class Wiki:
 
 
 def good_link_part(link_part: str) -> bool:
-    explore_wiki_links = [wiki.link for wiki in explore_wikis]
     bad_strs = [".", ":", "Main_Page"]
     for bad_str in bad_strs:
         if bad_str in link_part:
@@ -28,6 +27,8 @@ def good_link_part(link_part: str) -> bool:
 
 def get_wiki_branches(wiki: Wiki, session: requests.Session) -> list[Wiki]:
     html = session.get(wiki.link).text
+
+    wiki_link_re = re.compile("<a href=\"(/wiki/.*?)\"")
 
     wiki_branches = []
     for match in wiki_link_re.finditer(html):
@@ -71,8 +72,6 @@ if __name__ == "__main__":
     explore_wiki_links = set(start_wiki.link)
 
     # Run wiki breadth-first search.
-    wiki_link_re = re.compile("<a href=\"(/wiki/.*?)\"")
-
     session = requests.Session()
     pool = mp.Pool()
 
@@ -117,4 +116,3 @@ if __name__ == "__main__":
 
     end_time = time.time()
     print(f"Elapsed time: {end_time - start_time: .4f} seconds")
-
