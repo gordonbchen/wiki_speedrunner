@@ -10,6 +10,24 @@ from argparse import ArgumentParser
 from tqdm import tqdm
 
 
+def get_start_end_wiki_links() -> tuple[str, str]:
+    """Parse args and get user start and end wiki links."""
+    parser = ArgumentParser()
+    parser.add_argument(
+        "-s", "--start",
+        default="https://en.wikipedia.org/wiki/Toilet_paper_orientation",
+        help="starting wikipedia link"
+    )
+    parser.add_argument(
+        "-e", "--end",
+        default="https://en.wikipedia.org/wiki/Adolf_Hitler",
+        help="ending wikipedia link"
+    )
+
+    args = parser.parse_args()
+    return args.start, args.end
+
+
 @dataclass
 class Wiki:
     parents: list[Wiki]
@@ -44,24 +62,9 @@ def get_wiki_branches(wiki: Wiki, session: requests.Session) -> list[Wiki]:
 
 
 if __name__ == "__main__":
-    # Create arg parser.
-    parser = ArgumentParser()
-    parser.add_argument(
-        "-s", "--start",
-        default="https://en.wikipedia.org/wiki/Toilet_paper_orientation",
-        help="starting wikipedia link"
-    )
-    parser.add_argument(
-        "-e", "--end",
-        default="https://en.wikipedia.org/wiki/Adolf_Hitler",
-        help="ending wikipedia link"
-    )
-
-    # Parse args.
-    args = parser.parse_args()
-    
-    start_wiki = Wiki(parents=[], link=args.start)
-    end_wiki_link = args.end
+    # Get user start and end wikis.
+    start_wiki_link, end_wiki_link = get_start_end_wiki_links()
+    start_wiki = Wiki([], start_wiki_link)
 
     start_time = time.time()
 
@@ -91,26 +94,28 @@ if __name__ == "__main__":
         ]
         
         past_wiki_links.update(explore_wiki_links)
-        explore_wikis = []
-        explore_wiki_links = set()
+        explore_wikis.clear()
+        explore_wiki_links.clear()
 
         for i in tqdm(async_wiki_branches):
             if found: break
             wiki_branches = i.get()
 
             for wiki in wiki_branches:
-                if found: break
-                if (wiki.link not in past_wiki_links) and (wiki.link not in explore_wiki_links):
-                    if wiki.link == end_wiki_link:
-                        # Found end wiki.
-                        for parent in wiki.parents:
-                            print(parent.link)
-                        print(end_wiki_link)
-                        found = True
-                        break
+                if (wiki.link in past_wiki_links) or (wiki.link in explore_wiki_links):
+                    continue
 
-                    explore_wiki_links.add(wiki.link)
-                    explore_wikis.append(wiki)
+                if wiki.link == end_wiki_link:
+                    # Found end wiki.
+                    print()
+                    for parent in wiki.parents:
+                        print(parent.link)
+                    print(end_wiki_link)
+                    found = True
+                    break
+
+                explore_wiki_links.add(wiki.link)
+                explore_wikis.append(wiki)
 
         depth += 1
 
