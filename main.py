@@ -1,11 +1,8 @@
-from __future__ import annotations
-
 import requests
 import re
 import multiprocessing as mp
 import time
 
-from dataclasses import dataclass
 from argparse import ArgumentParser
 from tqdm import tqdm
 
@@ -28,13 +25,27 @@ def get_start_end_wiki_links() -> tuple[str, str]:
     return args.start, args.end
 
 
-@dataclass
-class Wiki:
-    parents: list[Wiki]
-    link: str
+def get_child_branches(parent_branch: list[str], session: requests.Session) -> list[list[str]]:
+    """Get child branches to explore."""
+    html = session.get(parent_branch[-1]).text
+
+    wiki_link_re = re.compile("<a href=\"(/wiki/.*?)\"")
+
+    child_branches = []
+    for match in wiki_link_re.finditer(html):
+        link_part = match.group(1)
+        if not good_link_part(link_part):
+            continue
+
+        link = "https://en.wikipedia.org" + link_part
+        child_branch = parent_branch + [link]
+        child_branches.append(child_branch)
+
+    return child_branches
 
 
 def good_link_part(link_part: str) -> bool:
+    """Return true if the link is valid."""
     bad_strs = [".", ":", "Main_Page"]
     for bad_str in bad_strs:
         if bad_str in link_part:
@@ -43,79 +54,61 @@ def good_link_part(link_part: str) -> bool:
     return True
 
 
-def get_wiki_branches(wiki: Wiki, session: requests.Session) -> list[Wiki]:
-    html = session.get(wiki.link).text
-
-    wiki_link_re = re.compile("<a href=\"(/wiki/.*?)\"")
-
-    wiki_branches = []
-    for match in wiki_link_re.finditer(html):
-        link_part = match.group(1)
-        if not good_link_part(link_part):
-            continue
-
-        link = "https://en.wikipedia.org" + link_part
-        wiki_branch = Wiki(wiki.parents + [wiki], link)
-        wiki_branches.append(wiki_branch)
-
-    return wiki_branches
-
-
 if __name__ == "__main__":
+    start_time = time.time()
+
     # Get user start and end wikis.
     start_wiki_link, end_wiki_link = get_start_end_wiki_links()
-    start_wiki = Wiki([], start_wiki_link)
-
-    start_time = time.time()
 
     # Store past and currently exploring wikis.
     past_wiki_links = set()
 
-    explore_wikis = [start_wiki]
-    explore_wiki_links = set(start_wiki.link)
+    explore_branches = [[start_wiki_link]]
+    explore_wiki_links = set(start_wiki_link)
 
     # Run wiki breadth-first search.
     session = requests.Session()
-    pool = mp.Pool()
+
+    n_processes = mp.cpu_count()
+    print(f"# cpu proceeses: {n_processes}")
+    pool = mp.Pool(n_processes)
 
     depth = 0
     found = False
     while not found:
-        if len(explore_wikis) == 0:
-            # No more wikis to explore. Impossible wiki route.
+        if len(explore_branches) == 0:
             print("Failed to find wiki.")
             break
 
         print(f"Depth: {depth}")
 
-        async_wiki_branches = [
-            pool.apply_async(get_wiki_branches, args=(wiki, session))
-            for wiki in explore_wikis
+        async_child_branches = [
+            pool.apply_async(get_child_branches, args=(parent_branch, session))
+            for parent_branch in explore_branches
         ]
         
         past_wiki_links.update(explore_wiki_links)
-        explore_wikis.clear()
+        explore_branches.clear()
         explore_wiki_links.clear()
 
-        for i in tqdm(async_wiki_branches):
+        for i in tqdm(async_child_branches):
             if found: break
-            wiki_branches = i.get()
+            child_branches = i.get()
 
-            for wiki in wiki_branches:
-                if (wiki.link in past_wiki_links) or (wiki.link in explore_wiki_links):
+            for child_branch in child_branches:
+                child_link = child_branch[-1]
+                if (child_link in past_wiki_links) or (child_link in explore_wiki_links):
                     continue
 
-                if wiki.link == end_wiki_link:
+                if child_link == end_wiki_link:
                     # Found end wiki.
                     print()
-                    for parent in wiki.parents:
-                        print(parent.link)
-                    print(end_wiki_link)
+                    print("\n".join(child_branch))
                     found = True
                     break
 
-                explore_wiki_links.add(wiki.link)
-                explore_wikis.append(wiki)
+                explore_wiki_links.add(child_link)
+                explore_branches.append(child_branch)
 
         depth += 1
 
